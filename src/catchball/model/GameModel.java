@@ -1,16 +1,6 @@
 package catchball.model;
 
-import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class GameModel {
 
@@ -20,21 +10,18 @@ public class GameModel {
     private static final double BASE_STEP = 4.0;
     private static final double MAX_STEP = 9.0;
     private static final double FLEE_DISTANCE = 140.0;
-    private static final long TICK_DELAY_MS = 40L;
 
     private final Random random = new Random();
 
-    private final IntegerProperty score = new SimpleIntegerProperty(0);
-    private final BooleanProperty gameActive = new SimpleBooleanProperty(true);
-    private final IntegerProperty ballSpeed = new SimpleIntegerProperty(40);
-    private final DoubleProperty ballX = new SimpleDoubleProperty();
-    private final DoubleProperty ballY = new SimpleDoubleProperty();
-    private final IntegerProperty comboStreak = new SimpleIntegerProperty(0);
-    private final IntegerProperty lastAward = new SimpleIntegerProperty(0);
-    private final DoubleProperty fieldWidth = new SimpleDoubleProperty(DEFAULT_FIELD_WIDTH);
-    private final DoubleProperty fieldHeight = new SimpleDoubleProperty(DEFAULT_FIELD_HEIGHT);
-
-    private Timer timer;
+    private int score;
+    private boolean gameActive = true;
+    private int ballSpeed = 40;
+    private double ballX;
+    private double ballY;
+    private int comboStreak;
+    private int lastAward;
+    private double fieldWidth = DEFAULT_FIELD_WIDTH;
+    private double fieldHeight = DEFAULT_FIELD_HEIGHT;
     private double velocityX;
     private double velocityY;
 
@@ -43,74 +30,49 @@ public class GameModel {
         randomizeVelocity();
     }
 
-    public void start() {
-        stop();
-        timer = new Timer("CatchBallTimer", true);
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                Platform.runLater(() -> {
-                    if (gameActive.get()) {
-                        updateBallPosition();
-                    }
-                });
-            }
-        };
-        timer.scheduleAtFixedRate(task, TICK_DELAY_MS, TICK_DELAY_MS);
-    }
-
-    public void stop() {
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
-        }
-    }
-
     public void newGame() {
-        score.set(0);
-        comboStreak.set(0);
-        lastAward.set(0);
-        gameActive.set(true);
+        score = 0;
+        comboStreak = 0;
+        lastAward = 0;
+        gameActive = true;
         centerBall();
         randomizeVelocity();
     }
 
     public void togglePause() {
-        gameActive.set(!gameActive.get());
+        gameActive = !gameActive;
     }
 
     public void registerHit() {
-        if (!gameActive.get()) {
+        if (!gameActive) {
             return;
         }
 
-        int streak = comboStreak.get() + 1;
-        comboStreak.set(streak);
-
-        int points = 1 + ((streak - 1) / 3);
-        lastAward.set(points);
-        score.set(score.get() + points);
+        comboStreak++;
+        int points = 1 + ((comboStreak - 1) / 3);
+        lastAward = points;
+        score += points;
 
         moveBallToRandomPosition();
         randomizeVelocity();
     }
 
     public void registerMiss() {
-        if (!gameActive.get()) {
+        if (!gameActive) {
             return;
         }
 
-        comboStreak.set(0);
-        lastAward.set(0);
+        comboStreak = 0;
+        lastAward = 0;
     }
 
     public void reactToCursor(double mouseX, double mouseY) {
-        if (!gameActive.get()) {
+        if (!gameActive) {
             return;
         }
 
-        double dx = ballX.get() - mouseX;
-        double dy = ballY.get() - mouseY;
+        double dx = ballX - mouseX;
+        double dy = ballY - mouseY;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance <= 0.001 || distance > FLEE_DISTANCE) {
@@ -126,10 +88,9 @@ public class GameModel {
         velocityX = escapeX * newStep;
         velocityY = escapeY * newStep;
 
-        double nextX = ballX.get() + velocityX * 2.0;
-        double nextY = ballY.get() + velocityY * 2.0;
-        ballX.set(clampX(nextX));
-        ballY.set(clampY(nextY));
+        ballX = clampX(ballX + velocityX * 2.0);
+        ballY = clampY(ballY + velocityY * 2.0);
+        normalizeVelocity();
     }
 
     public void setFieldSize(double width, double height) {
@@ -137,56 +98,28 @@ public class GameModel {
             return;
         }
 
-        fieldWidth.set(width);
-        fieldHeight.set(height);
-        ballX.set(clampX(ballX.get()));
-        ballY.set(clampY(ballY.get()));
+        fieldWidth = width;
+        fieldHeight = height;
+        ballX = clampX(ballX);
+        ballY = clampY(ballY);
     }
 
-    public IntegerProperty scoreProperty() {
-        return score;
-    }
-
-    public BooleanProperty gameActiveProperty() {
-        return gameActive;
-    }
-
-    public IntegerProperty ballSpeedProperty() {
-        return ballSpeed;
-    }
-
-    public DoubleProperty ballXProperty() {
-        return ballX;
-    }
-
-    public DoubleProperty ballYProperty() {
-        return ballY;
-    }
-
-    public IntegerProperty comboStreakProperty() {
-        return comboStreak;
-    }
-
-    public IntegerProperty lastAwardProperty() {
-        return lastAward;
-    }
-
-    public double getBallRadius() {
-        return BALL_RADIUS;
-    }
-
-    private void updateBallPosition() {
-        double nextX = ballX.get() + velocityX;
-        double nextY = ballY.get() + velocityY;
-
-        if (nextX <= BALL_RADIUS || nextX >= fieldWidth.get() - BALL_RADIUS) {
-            velocityX = -velocityX;
-            nextX = ballX.get() + velocityX;
+    public void updateBallPosition() {
+        if (!gameActive) {
+            return;
         }
 
-        if (nextY <= BALL_RADIUS || nextY >= fieldHeight.get() - BALL_RADIUS) {
+        double nextX = ballX + velocityX;
+        double nextY = ballY + velocityY;
+
+        if (nextX <= BALL_RADIUS || nextX >= fieldWidth - BALL_RADIUS) {
+            velocityX = -velocityX;
+            nextX = ballX + velocityX;
+        }
+
+        if (nextY <= BALL_RADIUS || nextY >= fieldHeight - BALL_RADIUS) {
             velocityY = -velocityY;
-            nextY = ballY.get() + velocityY;
+            nextY = ballY + velocityY;
         }
 
         if (random.nextDouble() < 0.08) {
@@ -195,18 +128,50 @@ public class GameModel {
             normalizeVelocity();
         }
 
-        ballX.set(clampX(nextX));
-        ballY.set(clampY(nextY));
+        ballX = clampX(nextX);
+        ballY = clampY(nextY);
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public boolean isGameActive() {
+        return gameActive;
+    }
+
+    public int getBallSpeed() {
+        return ballSpeed;
+    }
+
+    public double getBallX() {
+        return ballX;
+    }
+
+    public double getBallY() {
+        return ballY;
+    }
+
+    public int getComboStreak() {
+        return comboStreak;
+    }
+
+    public int getLastAward() {
+        return lastAward;
+    }
+
+    public double getBallRadius() {
+        return BALL_RADIUS;
     }
 
     private void moveBallToRandomPosition() {
-        ballX.set(BALL_RADIUS + random.nextDouble() * (fieldWidth.get() - 2 * BALL_RADIUS));
-        ballY.set(BALL_RADIUS + random.nextDouble() * (fieldHeight.get() - 2 * BALL_RADIUS));
+        ballX = BALL_RADIUS + random.nextDouble() * (fieldWidth - 2 * BALL_RADIUS);
+        ballY = BALL_RADIUS + random.nextDouble() * (fieldHeight - 2 * BALL_RADIUS);
     }
 
     private void centerBall() {
-        ballX.set(fieldWidth.get() / 2.0);
-        ballY.set(fieldHeight.get() / 2.0);
+        ballX = fieldWidth / 2.0;
+        ballY = fieldHeight / 2.0;
     }
 
     private void randomizeVelocity() {
@@ -228,14 +193,14 @@ public class GameModel {
         double limitedLength = Math.max(BASE_STEP, Math.min(MAX_STEP, length));
         velocityX = velocityX / length * limitedLength;
         velocityY = velocityY / length * limitedLength;
-        ballSpeed.set((int) Math.round(limitedLength * 10.0));
+        ballSpeed = (int) Math.round(limitedLength * 10.0);
     }
 
     private double clampX(double x) {
-        return Math.max(BALL_RADIUS, Math.min(fieldWidth.get() - BALL_RADIUS, x));
+        return Math.max(BALL_RADIUS, Math.min(fieldWidth - BALL_RADIUS, x));
     }
 
     private double clampY(double y) {
-        return Math.max(BALL_RADIUS, Math.min(fieldHeight.get() - BALL_RADIUS, y));
+        return Math.max(BALL_RADIUS, Math.min(fieldHeight - BALL_RADIUS, y));
     }
 }

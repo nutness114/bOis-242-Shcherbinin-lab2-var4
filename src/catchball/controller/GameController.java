@@ -1,145 +1,216 @@
 package catchball.controller;
 
 import catchball.model.GameModel;
-import javafx.animation.PauseTransition;
-import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.RadialGradient;
-import javafx.scene.paint.Stop;
-import javafx.scene.shape.Circle;
-import javafx.util.Duration;
+import catchball.view.GamePanel;
 
-import java.net.URL;
-import java.util.ResourceBundle;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+import javax.swing.WindowConstants;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-public class GameController implements Initializable {
-
-    @FXML
-    private Pane gamePane;
-
-    @FXML
-    private Circle ball;
-
-    @FXML
-    private Label scoreLabel;
-
-    @FXML
-    private Label statusLabel;
-
-    @FXML
-    private Label comboLabel;
-
-    @FXML
-    private Label speedLabel;
-
-    @FXML
-    private Button newGameButton;
+public class GameController {
 
     private final GameModel gameModel = new GameModel();
-    private final PauseTransition hitDelay = new PauseTransition(Duration.millis(220));
+    private final JFrame frame = new JFrame("Лови шарик");
+    private final JLabel scoreLabel = new JLabel();
+    private final JLabel comboLabel = new JLabel();
+    private final JLabel statusLabel = new JLabel();
+    private final JLabel speedLabel = new JLabel();
+    private final GamePanel gamePanel = new GamePanel(gameModel);
+    private final Timer hitDelayTimer;
+    private final Timer gameLoopTimer;
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
-        ball.setRadius(gameModel.getBallRadius());
-        ball.setFill(new RadialGradient(
-                0,
-                0.2,
-                0.35,
-                0.35,
-                0.8,
-                true,
-                CycleMethod.NO_CYCLE,
-                new Stop(0.0, Color.web("#ffd0b5")),
-                new Stop(0.45, Color.web("#ff7a59")),
-                new Stop(1.0, Color.web("#d9363e"))
-        ));
-        ball.setStroke(Color.web("#8f1d2c"));
-        ball.setStrokeWidth(3.0);
+    public GameController() {
+        hitDelayTimer = new Timer(220, event -> {
+            gameModel.registerHit();
+            refreshView();
+        });
+        hitDelayTimer.setRepeats(false);
 
-        ball.centerXProperty().bind(gameModel.ballXProperty());
-        ball.centerYProperty().bind(gameModel.ballYProperty());
+        gameLoopTimer = new Timer(40, event -> {
+            gameModel.updateBallPosition();
+            refreshView();
+        });
 
-        scoreLabel.textProperty().bind(Bindings.concat("Счёт: ", gameModel.scoreProperty()));
-        statusLabel.textProperty().bind(Bindings.when(gameModel.gameActiveProperty())
-                .then("Статус: игра активна")
-                .otherwise("Статус: пауза"));
-        comboLabel.textProperty().bind(Bindings.createStringBinding(
-                () -> {
-                    int streak = gameModel.comboStreakProperty().get();
-                    int award = gameModel.lastAwardProperty().get();
-                    if (streak == 0) {
-                        return "Серия: нет";
-                    }
-                    if (award > 1) {
-                        return "Серия: " + streak + " подряд, +" + (award - 1) + " бонус";
-                    }
-                    return "Серия: " + streak + " подряд";
-                },
-                gameModel.comboStreakProperty(),
-                gameModel.lastAwardProperty()
-        ));
-        speedLabel.textProperty().bind(Bindings.concat("Скорость шарика: ", gameModel.ballSpeedProperty()));
+        configureFrame();
+        bindEvents();
+        gameModel.newGame();
+        refreshView();
+    }
 
-        hitDelay.setOnFinished(event -> gameModel.registerHit());
+    public void show() {
+        gameModel.setFieldSize(gamePanel.getWidth(), gamePanel.getHeight());
+        gameLoopTimer.start();
+        frame.setVisible(true);
+    }
 
-        gamePane.widthProperty().addListener((obs, oldValue, newValue) ->
-                gameModel.setFieldSize(newValue.doubleValue(), gamePane.getHeight()));
-        gamePane.heightProperty().addListener((obs, oldValue, newValue) ->
-                gameModel.setFieldSize(gamePane.getWidth(), newValue.doubleValue()));
+    private void configureFrame() {
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(820, 640));
+        frame.setSize(960, 720);
+        frame.setLocationRelativeTo(null);
+        frame.setLayout(new BorderLayout());
 
-        Platform.runLater(() -> {
-            gameModel.setFieldSize(gamePane.getWidth(), gamePane.getHeight());
+        frame.add(createHeaderPanel(), BorderLayout.NORTH);
+        frame.add(createCenterPanel(), BorderLayout.CENTER);
+        frame.add(createFooterLabel(), BorderLayout.SOUTH);
+    }
+
+    private JPanel createHeaderPanel() {
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 12, 16));
+        headerPanel.setBackground(new Color(255, 250, 245));
+
+        JLabel titleLabel = new JLabel("Лови шарик");
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
+        titleLabel.setForeground(new Color(122, 31, 36));
+
+        JLabel hintLabel = new JLabel("Один клик по шарику даёт очки, двойной клик ставит игру на паузу. Промах сбрасывает серию.");
+        hintLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hintLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        hintLabel.setForeground(new Color(109, 76, 65));
+
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        infoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.setOpaque(false);
+
+        scoreLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        scoreLabel.setForeground(new Color(154, 31, 41));
+
+        comboLabel.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        comboLabel.setForeground(new Color(168, 77, 0));
+
+        statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        statusLabel.setForeground(new Color(55, 71, 79));
+
+        speedLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        speedLabel.setForeground(new Color(69, 90, 100));
+
+        JButton newGameButton = new JButton("Новая игра");
+        newGameButton.setFocusPainted(false);
+        newGameButton.setBackground(new Color(217, 54, 62));
+        newGameButton.setForeground(Color.WHITE);
+        newGameButton.addActionListener(event -> {
+            hitDelayTimer.stop();
             gameModel.newGame();
-            gameModel.start();
+            refreshView();
+        });
+
+        infoPanel.add(scoreLabel);
+        infoPanel.add(comboLabel);
+        infoPanel.add(statusLabel);
+        infoPanel.add(Box.createHorizontalStrut(24));
+        infoPanel.add(speedLabel);
+        infoPanel.add(newGameButton);
+
+        headerPanel.add(titleLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(hintLabel);
+        headerPanel.add(Box.createVerticalStrut(10));
+        headerPanel.add(infoPanel);
+        return headerPanel;
+    }
+
+    private JPanel createCenterPanel() {
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(new Color(255, 245, 238));
+        container.setBorder(BorderFactory.createEmptyBorder(8, 16, 16, 16));
+        container.add(gamePanel, BorderLayout.CENTER);
+        return container;
+    }
+
+    private JLabel createFooterLabel() {
+        JLabel footerLabel = new JLabel("Бонусный вариант: каждые 3 точных попадания подряд увеличивают награду на 1 очко.");
+        footerLabel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
+        footerLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        footerLabel.setForeground(new Color(109, 76, 65));
+        footerLabel.setOpaque(true);
+        footerLabel.setBackground(new Color(255, 250, 245));
+        return footerLabel;
+    }
+
+    private void bindEvents() {
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent event) {
+                hitDelayTimer.stop();
+                gameLoopTimer.stop();
+            }
+        });
+
+        gamePanel.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent event) {
+                gameModel.setFieldSize(gamePanel.getWidth(), gamePanel.getHeight());
+                refreshView();
+            }
+        });
+
+        gamePanel.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent event) {
+                gameModel.reactToCursor(event.getX(), event.getY());
+                refreshView();
+            }
+        });
+
+        gamePanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (gamePanel.isBallHit(event.getX(), event.getY())) {
+                    handleBallClick(event);
+                } else if (event.getClickCount() == 1) {
+                    hitDelayTimer.stop();
+                    gameModel.registerMiss();
+                    refreshView();
+                }
+            }
         });
     }
 
-    @FXML
     private void handleBallClick(MouseEvent event) {
-        if (event.getClickCount() == 2) {
-            hitDelay.stop();
+        if (event.getClickCount() >= 2) {
+            hitDelayTimer.stop();
             gameModel.togglePause();
-            event.consume();
+            refreshView();
             return;
         }
 
-        if (event.getClickCount() == 1) {
-            hitDelay.playFromStart();
-            event.consume();
+        hitDelayTimer.restart();
+    }
+
+    private void refreshView() {
+        scoreLabel.setText("Счёт: " + gameModel.getScore());
+        statusLabel.setText(gameModel.isGameActive() ? "Статус: игра активна" : "Статус: пауза");
+        speedLabel.setText("Скорость шарика: " + gameModel.getBallSpeed());
+
+        int streak = gameModel.getComboStreak();
+        int award = gameModel.getLastAward();
+        if (streak == 0) {
+            comboLabel.setText("Серия: нет");
+        } else if (award > 1) {
+            comboLabel.setText("Серия: " + streak + " подряд, +" + (award - 1) + " бонус");
+        } else {
+            comboLabel.setText("Серия: " + streak + " подряд");
         }
-    }
 
-    @FXML
-    private void handlePaneClick(MouseEvent event) {
-        if (event.getTarget() == ball || event.getClickCount() != 1) {
-            return;
-        }
-
-        hitDelay.stop();
-        gameModel.registerMiss();
-    }
-
-    @FXML
-    private void handleMouseMoved(MouseEvent event) {
-        gameModel.reactToCursor(event.getX(), event.getY());
-    }
-
-    @FXML
-    private void handleNewGame() {
-        hitDelay.stop();
-        gameModel.newGame();
-    }
-
-    public void shutdown() {
-        hitDelay.stop();
-        gameModel.stop();
+        gamePanel.repaint();
     }
 }

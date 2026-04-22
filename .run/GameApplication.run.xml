@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GameApplication" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="catchball.GameApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <module name="Labb 2" />
+    <shortenClasspath name="ARGS_FILE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
