@@ -1,56 +1,52 @@
 # Лабораторная работа 2 — «Лови шарик»
 
-Проект переделан в обычное desktop-приложение на `Java Swing`, чтобы он запускался в `GIGA IDE` на чужом компьютере без `JavaFX`, без Maven-зависимостей и без путей, привязанных к вашей машине.
+Проект сделан как desktop-приложение на `Java Swing` и подготовлен к запуску из репозитория GitHub. Я вернул `pom.xml`, перевёл код в нормальную Maven-структуру `src/main/java` и добавил локальную Maven-настройку, чтобы IDE и Maven видели главный класс `catchball.GameApplication` корректно.
 
-## Почему раньше не запускалось
+## Почему раньше была ошибка `Could not find or load main class`
 
-Проблемы были сразу в нескольких местах:
+Причина была не в отсутствии класса в коде, а в сборке проекта:
 
-- проект зависел от `JavaFX`
-- путь к `jfxrt.jar` был жёстко зашит под ваш компьютер
-- запуск хранился в `.idea/workspace.xml`, который не переносится через Git
-- в репозитории лежали старые файлы из `out`
-- `pom.xml` провоцировал лишние ошибки импорта и сборки в чужой среде
+- проект раньше жил в нестандартной структуре `src/...`
+- IDE могла не собрать класс в ожидаемую папку перед запуском
+- в конфигурациях были старые следы JavaFX и старого JRE
+- Maven в этой среде упирается в SSL и в кривое Java-окружение, если не зафиксировать правильные настройки
 
-Из-за этого после обычного `git clone` проект мог открыться с ошибками даже до запуска.
+Из-за этого запуск видел имя `catchball.GameApplication`, но не находил готовый `.class` в classpath.
 
 ## Что я исправил
 
-- полностью убрал зависимость от `JavaFX`
-- переписал интерфейс и запуск на стандартный `Swing`
-- удалил проблемный `pom.xml`, чтобы проект открывался как обычный Java-проект
-- убрал привязки к локальному `jfxrt.jar` из [Labb 2.iml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/Labb%202.iml)
-- добавил общую конфигурацию запуска [GameApplication.run.xml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/.run/GameApplication.run.xml)
-- убрал старые артефакты `out/...` из Git
+- добавил [pom.xml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/pom.xml)
+- перенёс исходники в `src/main/java`
+- оставил ваш изменённый код игры
+- добавил [.mvn/maven.config](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/.mvn/maven.config), чтобы Maven использовал проектный `.m2repo`
+- положил в проект локальный `.m2repo`, чтобы сборка не зависела от проблемных сертификатов
+- обновил общую run-конфигурацию [GameApplication.run.xml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/.run/GameApplication.run.xml)
+- добавил [run.cmd](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/run.cmd) для быстрого запуска на вашей текущей среде
 
-## Что делает программа
+## Что осталось в самой программе
 
-- шарик движется по игровому полю
-- одинарный клик по шарику засчитывает попадание
-- двойной клик по шарику ставит игру на паузу и снимает её
+Ваша видоизменённая версия игры сохранена:
+
+- шарик двигается и меняет траекторию
+- шарик реагирует на курсор
+- одинарный клик даёт очки
+- двойной клик ставит игру на паузу
 - промах по полю сбрасывает серию
-- кнопка `Новая игра` начинает новую партию
-- на экране показываются счёт, серия, статус игры и скорость шарика
+- работает бонусная система по варианту 4
+- показываются счёт, серия, статус и скорость шарика
 
-## Индивидуальный вариант 4
+## Структура проекта
 
-Реализована бонусная система за серию точных попаданий без промахов:
-
-- 1-3 попадания подряд: `1` очко
-- 4-6 попаданий подряд: `2` очка
-- 7-9 попаданий подряд: `3` очка
-- дальше награда увеличивается на `1` за каждые следующие 3 точных попадания подряд
-- промах по полю полностью сбрасывает серию
-
-## Файлы проекта
-
-- [GameApplication.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/catchball/GameApplication.java)
-- [GameController.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/catchball/controller/GameController.java)
-- [GameModel.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/catchball/model/GameModel.java)
-- [GamePanel.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/catchball/view/GamePanel.java)
+- [pom.xml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/pom.xml)
+- [.mvn/maven.config](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/.mvn/maven.config)
+- [GameApplication.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/main/java/catchball/GameApplication.java)
+- [GameController.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/main/java/catchball/controller/GameController.java)
+- [GameModel.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/main/java/catchball/model/GameModel.java)
+- [GamePanel.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/main/java/catchball/view/GamePanel.java)
 - [GameApplication.run.xml](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/.run/GameApplication.run.xml)
+- [run.cmd](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/run.cmd)
 
-## Как запускать в GIGA IDE на чужом компьютере
+## Как запускать в GIGA IDE
 
 1. Клонируйте репозиторий:
 
@@ -59,30 +55,36 @@ git clone https://github.com/nutness114/bOis-242-Shcherbinin-lab2-var4.git
 ```
 
 2. Откройте папку проекта в `GIGA IDE`.
-3. Дождитесь, пока IDE считает проект.
-4. Откройте [GameApplication.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/catchball/GameApplication.java).
-5. Нажмите `Run` рядом с `main`.
+3. Дождитесь индексации.
+4. Если IDE увидит Maven-проект, нажмите `Reload`.
+5. Откройте [GameApplication.java](/D:/Student/Щербинин/Кроссплатформы/Лабы/Labb%202/src/main/java/catchball/GameApplication.java).
+6. Запустите `main`.
 
-Если `GIGA IDE` подхватит `.run`, можно запускать готовую конфигурацию `GameApplication` без ручной настройки.
+Если IDE подхватит `.run`, можно запускать готовую конфигурацию `GameApplication`.
 
-## Ручной запуск через Java
+## Как запустить точно в вашей текущей среде
 
-Если нужно быстро проверить проект вручную:
+Самый надёжный способ на этом компьютере:
 
 ```powershell
 cd "D:\Student\Щербинин\Кроссплатформы\Лабы\Labb 2"
+.\run.cmd
 ```
 
-```powershell
-if (Test-Path out-manual) { Remove-Item -LiteralPath out-manual -Recurse -Force }
-New-Item -ItemType Directory -Path out-manual | Out-Null
-& "D:\GigaIde\jbr\bin\javac.exe" --release 8 -d out-manual (Get-ChildItem -Recurse -Filter *.java src | ForEach-Object { $_.FullName })
-```
+Этот скрипт:
 
-```powershell
-& "D:\GigaIde\jbr\bin\java.exe" -cp out-manual catchball.GameApplication
-```
+- использует `D:\GigaIde\jbr`
+- собирает проект через Maven офлайн
+- запускает `catchball.GameApplication`
 
-## Главное
+## Что я проверил
 
-Теперь проект не зависит от `JavaFX`, `jfxrt.jar`, `pom.xml` и ваших локальных путей. Для чужого компьютера это намного надёжнее.
+Я подтвердил локально:
+
+- `mvn compile` проходит при `JAVA_HOME=D:\GigaIde\jbr`
+- `target\classes\catchball\GameApplication.class` создаётся
+- приложение реально стартует из `target\classes`
+
+## Важное уточнение
+
+В этой среде Maven ломается, если запускается не через JBR от GIGA IDE. Поэтому я зафиксировал рабочий путь и добавил `run.cmd`. Для вашего компьютера это как раз тот вариант, который должен запускаться стабильнее всего прямо из клона репозитория.

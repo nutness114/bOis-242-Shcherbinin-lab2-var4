@@ -1,5 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="GameApplication" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="D:\GigaIde\jbr" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="catchball.GameApplication" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <module name="Labb 2" />
